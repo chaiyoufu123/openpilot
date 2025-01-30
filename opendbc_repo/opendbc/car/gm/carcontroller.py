@@ -15,7 +15,7 @@ VisualAlert = structs.CarControl.HUDControl.VisualAlert
 NetworkLocation = structs.CarParams.NetworkLocation
 LongCtrlState = structs.CarControl.Actuators.LongControlState
 #GearShifter = structs.CarState.GearShifter # 아래까지, 두 줄은 전혀 쓰이지 않고 있습니다.
-#TransmissionType = structs.CarParams.TransmissionType # 
+#TransmissionType = structs.CarParams.TransmissionType #
 
 # Camera cancels up to 0.1s after brake is pressed, ECM allows 0.5s
 CAMERA_CANCEL_DELAY_FRAMES = 10
@@ -67,8 +67,13 @@ class CarController(CarControllerBase):
       pedal_gas = 0
     else:
       # pedaloffset = 0.24
-      pedaloffset = interp(car_velocity, [0., 3, 6, 30], [0.10, 0.175, 0.240, 0.240])
+      pedaloffset = interp(car_velocity, [0., 3, 6, 30], [0.08, 0.175, 0.240, 0.240])
       pedal_gas = clip((pedaloffset + accel * 0.6), 0.0, 1.0)
+
+      ####for safety.
+      pedal_gas_max = interp(car_velocity, [0.0, 5, 30], [0.21, 0.3175, 0.3525])
+      pedal_gas = clip(pedal_gas, 0.0, pedal_gas_max)
+      ####for safety. end.
 
     return pedal_gas, press_regen_paddle
 
@@ -138,7 +143,7 @@ class CarController(CarControllerBase):
       # Auto Cruise Test...
       if CS.out.activateCruise and not CS.out.cruiseState.enabled:
         can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.POWERTRAIN, CS.buttons_counter, CruiseButtons.DECEL_SET))
-        
+
       # Gas/regen, brakes, and UI commands - all at 25Hz
       if self.frame % 4 == 0:
         stopping = actuators.longControlState == LongCtrlState.stopping
